@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>비즈보드 아카이브</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>📌 카카오 비즈보드 아카이브</h1>
+    <div class="topbar-actions">
+      <button id="btnExport" class="btn btn-ghost">내보내기</button>
+      <label class="btn btn-ghost" for="importFile">가져오기</label>
+      <input type="file" id="importFile" accept="application/json" hidden />
+      <button id="btnAdd" class="btn btn-primary">+ 광고 추가</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="filters">
+      <input type="text" id="fSearch" placeholder="브랜드 / 카피 / 메모 검색" />
+
+      <select id="fCategory">
+        <option value="">업종 전체</option>
+      </select>
+
+      <select id="fAge">
+        <option value="">타깃 연령 전체</option>
+        <option value="10대">10대</option>
+        <option value="20대">20대</option>
+        <option value="30대">30대</option>
+        <option value="40대">40대</option>
+        <option value="50대+">50대+</option>
+        <option value="전연령/불명">전연령/불명</option>
+      </select>
+
+      <select id="fGender">
+        <option value="">타깃 성별 전체</option>
+        <option value="남성">남성</option>
+        <option value="여성">여성</option>
+        <option value="전체/불명">전체/불명</option>
+      </select>
+
+      <input type="date" id="fDateFrom" />
+      <span class="filter-sep">~</span>
+      <input type="date" id="fDateTo" />
+
+      <select id="fSort">
+        <option value="dateDesc">최신 캡처순</option>
+        <option value="dateAsc">오래된 캡처순</option>
+        <option value="brand">브랜드순</option>
+      </select>
+
+      <button id="btnResetFilter" class="btn btn-ghost">초기화</button>
+    </section>
+
+    <p class="count-line"><span id="resultCount">0</span>개의 광고</p>
+
+    <section id="gallery" class="gallery"></section>
+    <p id="emptyState" class="empty-state" hidden>아직 저장된 광고가 없습니다. 오른쪽 위의 "+ 광고 추가"로 스크린샷을 업로드해보세요.</p>
+  </main>
+
+  <!-- Add/Edit Modal -->
+  <div id="modalBackdrop" class="modal-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">광고 추가</h2>
+        <button id="btnCloseModal" class="btn-icon">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="dropZone" class="drop-zone">
+          <img id="previewImg" hidden />
+          <p id="dropZoneText">이미지를 드래그하거나 클릭해서 선택 (붙여넣기 Ctrl/Cmd+V 가능)</p>
+          <input type="file" id="fileInput" accept="image/*" hidden />
+        </div>
+        <p id="ocrStatus" class="ocr-status" hidden></p>
+
+        <div class="form-grid">
+          <label>브랜드 / 광고주
+            <input type="text" id="inBrand" placeholder="예: 올리브영" />
+          </label>
+
+          <label>업종
+            <input type="text" id="inCategory" list="categoryList" placeholder="예: 뷰티, 게임, 금융..." />
+            <datalist id="categoryList">
+              <option value="뷰티"></option>
+              <option value="패션"></option>
+              <option value="게임"></option>
+              <option value="금융"></option>
+              <option value="이커머스"></option>
+              <option value="교육"></option>
+              <option value="여행"></option>
+              <option value="F&B"></option>
+              <option value="헬스케어"></option>
+              <option value="기타"></option>
+            </datalist>
+          </label>
+
+          <label>소재 형식
+            <select id="inFormat">
+              <option value="오브젝트형">오브젝트형</option>
+              <option value="텍스트형">텍스트형</option>
+              <option value="이미지형">이미지형</option>
+              <option value="캐러셀">캐러셀</option>
+              <option value="기타">기타</option>
+            </select>
+          </label>
+
+          <label>캡처 날짜
+            <input type="date" id="inDate" />
+          </label>
+
+          <fieldset class="fieldset-inline">
+            <legend>타깃 연령 (복수 선택)</legend>
+            <label class="chk"><input type="checkbox" value="10대" /> 10대</label>
+            <label class="chk"><input type="checkbox" value="20대" /> 20대</label>
+            <label class="chk"><input type="checkbox" value="30대" /> 30대</label>
+            <label class="chk"><input type="checkbox" value="40대" /> 40대</label>
+            <label class="chk"><input type="checkbox" value="50대+" /> 50대+</label>
+            <label class="chk"><input type="checkbox" value="전연령/불명" /> 전연령/불명</label>
+          </fieldset>
+
+          <label>타깃 성별
+            <select id="inGender">
+              <option value="전체/불명">전체/불명</option>
+              <option value="남성">남성</option>
+              <option value="여성">여성</option>
+            </select>
+          </label>
+
+          <label>지역 (선택)
+            <input type="text" id="inRegion" placeholder="예: 서울, 전국..." />
+          </label>
+
+          <label>캡처 계정/기기 메모 (선택)
+            <input type="text" id="inSource" placeholder="예: 30대 남성 테스트 계정" />
+          </label>
+
+          <label class="full-width">카피 문구
+            <input type="text" id="inCopy" placeholder="배너에 노출된 문구" />
+          </label>
+
+          <label class="full-width">메모
+            <textarea id="inMemo" rows="2" placeholder="자유 메모"></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btnDelete" class="btn btn-danger" hidden>삭제</button>
+        <div class="spacer"></div>
+        <button id="btnCancel" class="btn btn-ghost">취소</button>
+        <button id="btnSave" class="btn btn-primary">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detailBackdrop" class="modal-backdrop" hidden>
+    <div class="modal modal-detail">
+      <div class="modal-header">
+        <h2 id="detailTitle">상세보기</h2>
+        <button id="btnCloseDetail" class="btn-icon">✕</button>
+      </div>
+      <div class="modal-body detail-body">
+        <img id="detailImg" />
+        <dl id="detailMeta" class="detail-meta"></dl>
+      </div>
+      <div class="modal-footer">
+        <button id="btnDetailDelete" class="btn btn-danger">삭제</button>
+        <div class="spacer"></div>
+        <button id="btnDetailEdit" class="btn btn-primary">수정</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</body>
+</html>
