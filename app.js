@@ -159,16 +159,7 @@ let allAds = [];
 
 async function refresh() {
   allAds = await dbGetAll();
-  populateMediaFilter();
   renderGallery();
-}
-
-function populateMediaFilter() {
-  const sel = document.getElementById("fMedia");
-  const current = sel.value;
-  const media = Array.from(new Set(allAds.map((a) => a.media).filter(Boolean))).sort();
-  sel.innerHTML = '<option value="">매체 전체</option>' + media.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-  sel.value = current;
 }
 
 function escapeHtml(str) {
@@ -421,7 +412,7 @@ document.getElementById("btnSave").addEventListener("click", async () => {
     image: currentImageDataUrl,
     brand: document.getElementById("inBrand").value.trim(),
     size: document.getElementById("inSize").value,
-    media: document.getElementById("inMedia").value.trim(),
+    media: document.getElementById("inMedia").value,
     format: document.getElementById("inFormat").value,
     date: document.getElementById("inDate").value,
     targetAge,

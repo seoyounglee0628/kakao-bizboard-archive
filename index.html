@@ -24,6 +24,11 @@
 
       <select id="fMedia">
         <option value="">매체 전체</option>
+        <option value="Google">Google</option>
+        <option value="Meta">Meta</option>
+        <option value="Kakao">Kakao</option>
+        <option value="CPA">CPA</option>
+        <option value="TMS">TMS</option>
       </select>
 
       <select id="fSize">
@@ -112,13 +117,14 @@
           </label>
 
           <label>매체
-            <input type="text" id="inMedia" list="mediaList" placeholder="예: Google, Meta, Kakao, CPA..." />
-            <datalist id="mediaList">
-              <option value="Google"></option>
-              <option value="Meta"></option>
-              <option value="Kakao"></option>
-              <option value="CPA"></option>
-            </datalist>
+            <select id="inMedia">
+              <option value="">선택 안 함</option>
+              <option value="Google">Google</option>
+              <option value="Meta">Meta</option>
+              <option value="Kakao">Kakao</option>
+              <option value="CPA">CPA</option>
+              <option value="TMS">TMS</option>
+            </select>
           </label>
 
           <label>소재 형식
