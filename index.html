@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>비즈보드 아카이브</title>
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1/dist/cropper.min.css" />
 </head>
 <body>
   <header class="topbar">
@@ -75,6 +76,18 @@
           <p id="dropZoneText">이미지를 드래그하거나 클릭해서 선택 (붙여넣기 Ctrl/Cmd+V 가능)</p>
           <input type="file" id="fileInput" accept="image/*" hidden />
         </div>
+        <button id="btnRecrop" class="btn btn-ghost recrop-btn" type="button" hidden>✂️ 다시 자르기</button>
+
+        <div id="cropStage" class="crop-stage" hidden>
+          <div class="crop-image-wrap">
+            <img id="cropImage" />
+          </div>
+          <div class="crop-actions">
+            <button id="btnCropSkip" class="btn btn-ghost" type="button">원본 그대로 사용</button>
+            <button id="btnCropApply" class="btn btn-primary" type="button">자르기 적용</button>
+          </div>
+        </div>
+
         <p id="ocrStatus" class="ocr-status" hidden></p>
 
         <div class="form-grid">
@@ -177,6 +190,7 @@
   </div>
 
   <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1/dist/cropper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </body>
 </html>

@@ -250,6 +250,9 @@ function resetForm() {
   previewImg.hidden = true;
   previewImg.src = "";
   dropZoneText.hidden = false;
+  dropZone.hidden = false;
+  document.getElementById("btnRecrop").hidden = true;
+  closeCropStage();
   document.getElementById("inBrand").value = "";
   document.getElementById("inCategory").value = "";
   document.getElementById("inFormat").value = "오브젝트형";
@@ -279,6 +282,7 @@ function openEditModal(ad) {
   previewImg.src = ad.image;
   previewImg.hidden = false;
   dropZoneText.hidden = true;
+  document.getElementById("btnRecrop").hidden = false;
   document.getElementById("inBrand").value = ad.brand || "";
   document.getElementById("inCategory").value = ad.category || "";
   document.getElementById("inFormat").value = ad.format || "오브젝트형";
@@ -301,16 +305,67 @@ function closeModal() {
   modalBackdrop.hidden = true;
 }
 
+function finalizeImage(dataUrl) {
+  currentImageDataUrl = dataUrl;
+  previewImg.src = dataUrl;
+  previewImg.hidden = false;
+  dropZoneText.hidden = true;
+  dropZone.hidden = false;
+  document.getElementById("btnRecrop").hidden = false;
+  runOcrAutoFill(dataUrl);
+}
+
+// ---------- Crop ----------
+const cropStage = document.getElementById("cropStage");
+const cropImage = document.getElementById("cropImage");
+let cropper = null;
+
+function openCropStage(dataUrl) {
+  dropZone.hidden = true;
+  document.getElementById("btnRecrop").hidden = true;
+  cropStage.hidden = false;
+  cropImage.src = dataUrl;
+
+  if (cropper) { cropper.destroy(); cropper = null; }
+
+  if (typeof Cropper === "undefined") {
+    // 크롭 라이브러리가 아직 로드되지 않았으면 크롭 없이 바로 사용
+    closeCropStage();
+    finalizeImage(dataUrl);
+    return;
+  }
+
+  cropper = new Cropper(cropImage, { viewMode: 1, autoCropArea: 1, background: false });
+}
+
+function closeCropStage() {
+  cropStage.hidden = true;
+  if (cropper) { cropper.destroy(); cropper = null; }
+}
+
+document.getElementById("btnCropApply").addEventListener("click", () => {
+  if (!cropper) return;
+  const canvas = cropper.getCroppedCanvas();
+  const dataUrl = canvas ? canvas.toDataURL("image/png") : cropImage.src;
+  closeCropStage();
+  finalizeImage(dataUrl);
+});
+
+document.getElementById("btnCropSkip").addEventListener("click", () => {
+  const dataUrl = cropImage.src;
+  closeCropStage();
+  finalizeImage(dataUrl);
+});
+
+document.getElementById("btnRecrop").addEventListener("click", () => {
+  if (!currentImageDataUrl) return;
+  openCropStage(currentImageDataUrl);
+});
+
 function handleFile(file) {
   if (!file || !file.type.startsWith("image/")) return;
   const reader = new FileReader();
-  reader.onload = () => {
-    currentImageDataUrl = reader.result;
-    previewImg.src = currentImageDataUrl;
-    previewImg.hidden = false;
-    dropZoneText.hidden = true;
-    runOcrAutoFill(currentImageDataUrl);
-  };
+  reader.onload = () => openCropStage(reader.result);
   reader.readAsDataURL(file);
 }
 
