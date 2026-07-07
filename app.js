@@ -9,14 +9,17 @@ let editingId = null;
 // OCR로 텍스트만 뽑고, 알려진 브랜드명이 텍스트에 포함되어 있으면 브랜드/업종을 추정한다.
 // 로고만 있고 텍스트가 없는 경우, 또는 목록에 없는 브랜드는 인식하지 못하므로 항상 수동 확인이 필요하다.
 const BRAND_CATEGORY_MAP = {
-  "올리브영": "뷰티", "무신사": "패션", "지그재그": "패션", "에이블리": "패션", "브랜디": "패션",
-  "쿠팡": "이커머스", "컬리": "이커머스", "마켓컬리": "이커머스", "11번가": "이커머스", "지마켓": "이커머스", "G마켓": "이커머스",
+  "올리브영": "뷰티", "무신사": "패션", "지그재그": "패션", "에이블리": "패션", "브랜디": "패션", "화해": "뷰티",
+  "쿠팡": "이커머스", "컬리": "이커머스", "마켓컬리": "이커머스", "11번가": "이커머스", "지마켓": "이커머스", "G마켓": "이커머스", "다이소": "이커머스", "하이마트": "이커머스",
   "배달의민족": "F&B", "배민": "F&B", "요기요": "F&B", "쿠팡이츠": "F&B",
-  "토스": "금융", "카카오뱅크": "금융", "카카오페이": "금융", "신한카드": "금융", "삼성카드": "금융", "뱅크샐러드": "금융", "핀다": "금융",
+  "토스": "금융", "카카오뱅크": "금융", "카카오페이": "금융", "신한카드": "금융", "삼성카드": "금융", "뱅크샐러드": "금융", "핀다": "금융", "토스증권": "금융",
   "야놀자": "여행", "여기어때": "여행", "트리플": "여행", "마이리얼트립": "여행", "클룩": "여행",
   "리니지": "게임", "오딘": "게임", "우마무스메": "게임", "넷마블": "게임", "넥슨": "게임", "라이온하트": "게임",
-  "메가스터디": "교육", "해커스": "교육", "야나두": "교육", "클래스101": "교육",
-  "당근마켓": "이커머스", "당근": "이커머스",
+  "메가스터디": "교육", "해커스": "교육", "야나두": "교육", "클래스101": "교육", "콴다": "교육", "시원스쿨": "교육", "스픽": "교육",
+  "당근마켓": "이커머스", "당근": "이커머스", "오늘의집": "이커머스",
+  "직방": "기타", "다방": "기타",
+  "원티드": "기타", "잡코리아": "기타", "사람인": "기타", "리멤버": "기타",
+  "카카오T": "기타", "카카오모빌리티": "기타", "타다": "기타", "쏘카": "기타", "그린카": "기타",
 };
 
 const CATEGORY_KEYWORDS = {
@@ -35,10 +38,7 @@ function guessFromOcrText(text) {
   const result = { brand: "", category: "", copyText: "" };
   if (!text) return result;
 
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  if (lines.length) {
-    result.copyText = lines.reduce((a, b) => (b.length > a.length ? b : a), lines[0]);
-  }
+  const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length >= 2);
 
   for (const [brand, category] of Object.entries(BRAND_CATEGORY_MAP)) {
     if (text.includes(brand)) {
@@ -47,6 +47,14 @@ function guessFromOcrText(text) {
       break;
     }
   }
+
+  // 카피는 보통 2줄 이내로 나뉘어 있으므로, 브랜드명 줄을 제외한 가장 긴 두 줄을
+  // 원래 등장 순서대로 이어붙인다.
+  const topLines = lines
+    .filter((l) => l !== result.brand)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 2);
+  result.copyText = lines.filter((l) => topLines.includes(l)).join(" ");
 
   if (!result.category) {
     let bestCategory = "";
@@ -61,6 +69,34 @@ function guessFromOcrText(text) {
   return result;
 }
 
+// 배너 광고는 해상도가 낮고 대비가 흐린 경우가 많아, 확대 + 흑백 대비 강조를 거치면
+// Tesseract 인식률이 눈에 띄게 좋아진다.
+function preprocessImageForOcr(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = img.width < 600 ? 2 : 1;
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        const contrasted = Math.min(255, Math.max(0, (gray - 128) * 1.3 + 128));
+        d[i] = d[i + 1] = d[i + 2] = contrasted;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 async function runOcrAutoFill(dataUrl) {
   const statusEl = document.getElementById("ocrStatus");
   if (typeof Tesseract === "undefined") {
@@ -71,8 +107,13 @@ async function runOcrAutoFill(dataUrl) {
   statusEl.classList.add("working");
   statusEl.textContent = "이미지에서 텍스트 인식 중... (첫 실행 시 시간이 더 걸릴 수 있어요)";
 
+  let worker = null;
   try {
-    const { data: { text } } = await Tesseract.recognize(dataUrl, "kor+eng");
+    const preprocessed = await preprocessImageForOcr(dataUrl);
+    worker = await Tesseract.createWorker("kor+eng");
+    // 배너 광고는 로고/카피/버튼 문구가 흩어져 있는 경우가 많아 sparse text 모드가 더 잘 맞는다.
+    await worker.setParameters({ tessedit_pageseg_mode: "11" });
+    const { data: { text } } = await worker.recognize(preprocessed);
     const guess = guessFromOcrText(text);
 
     const brandInput = document.getElementById("inBrand");
@@ -90,6 +131,8 @@ async function runOcrAutoFill(dataUrl) {
   } catch (err) {
     statusEl.classList.remove("working");
     statusEl.textContent = "자동 인식에 실패했어요. 직접 입력해주세요.";
+  } finally {
+    if (worker) await worker.terminate();
   }
 }
 
@@ -148,6 +191,7 @@ let allAds = [];
 async function refresh() {
   allAds = await dbGetAll();
   populateCategoryFilter();
+  populateMediaFilter();
   renderGallery();
 }
 
@@ -156,6 +200,14 @@ function populateCategoryFilter() {
   const current = sel.value;
   const cats = Array.from(new Set(allAds.map((a) => a.category).filter(Boolean))).sort();
   sel.innerHTML = '<option value="">업종 전체</option>' + cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  sel.value = current;
+}
+
+function populateMediaFilter() {
+  const sel = document.getElementById("fMedia");
+  const current = sel.value;
+  const media = Array.from(new Set(allAds.map((a) => a.media).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">매체 전체</option>' + media.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
   sel.value = current;
 }
 
@@ -168,6 +220,8 @@ function getFilters() {
   return {
     search: document.getElementById("fSearch").value.trim().toLowerCase(),
     category: document.getElementById("fCategory").value,
+    media: document.getElementById("fMedia").value,
+    size: document.getElementById("fSize").value,
     age: document.getElementById("fAge").value,
     gender: document.getElementById("fGender").value,
     dateFrom: document.getElementById("fDateFrom").value,
@@ -179,10 +233,12 @@ function getFilters() {
 function applyFilters(ads, f) {
   let out = ads.filter((a) => {
     if (f.search) {
-      const hay = [a.brand, a.copyText, a.memo, a.source].join(" ").toLowerCase();
+      const hay = [a.brand, a.copyText, a.memo].join(" ").toLowerCase();
       if (!hay.includes(f.search)) return false;
     }
     if (f.category && a.category !== f.category) return false;
+    if (f.media && a.media !== f.media) return false;
+    if (f.size && a.size !== f.size) return false;
     if (f.age && !(a.targetAge || []).includes(f.age)) return false;
     if (f.gender && a.targetGender !== f.gender) return false;
     if (f.dateFrom && a.date && a.date < f.dateFrom) return false;
@@ -224,6 +280,8 @@ function renderGallery() {
         <p class="card-brand">${escapeHtml(a.brand) || "(브랜드 미입력)"}</p>
         <div class="card-tags">
           ${a.category ? `<span class="tag category">${escapeHtml(a.category)}</span>` : ""}
+          ${a.media ? `<span class="tag media">${escapeHtml(a.media)}</span>` : ""}
+          ${a.size ? `<span class="tag size">${escapeHtml(a.size)}</span>` : ""}
           ${(a.targetAge || []).map((t) => `<span class="tag age">${escapeHtml(t)}</span>`).join("")}
           ${a.targetGender ? `<span class="tag gender">${escapeHtml(a.targetGender)}</span>` : ""}
         </div>
@@ -255,11 +313,11 @@ function resetForm() {
   closeCropStage();
   document.getElementById("inBrand").value = "";
   document.getElementById("inCategory").value = "";
+  document.getElementById("inSize").value = "";
+  document.getElementById("inMedia").value = "";
   document.getElementById("inFormat").value = "오브젝트형";
   document.getElementById("inDate").value = new Date().toISOString().slice(0, 10);
   document.getElementById("inGender").value = "전체/불명";
-  document.getElementById("inRegion").value = "";
-  document.getElementById("inSource").value = "";
   document.getElementById("inCopy").value = "";
   document.getElementById("inMemo").value = "";
   document.querySelectorAll('.fieldset-inline input[type="checkbox"]').forEach((c) => (c.checked = false));
@@ -285,11 +343,11 @@ function openEditModal(ad) {
   document.getElementById("btnRecrop").hidden = false;
   document.getElementById("inBrand").value = ad.brand || "";
   document.getElementById("inCategory").value = ad.category || "";
+  document.getElementById("inSize").value = ad.size || "";
+  document.getElementById("inMedia").value = ad.media || "";
   document.getElementById("inFormat").value = ad.format || "오브젝트형";
   document.getElementById("inDate").value = ad.date || "";
   document.getElementById("inGender").value = ad.targetGender || "전체/불명";
-  document.getElementById("inRegion").value = ad.region || "";
-  document.getElementById("inSource").value = ad.source || "";
   document.getElementById("inCopy").value = ad.copyText || "";
   document.getElementById("inMemo").value = ad.memo || "";
   (ad.targetAge || []).forEach((val) => {
@@ -408,12 +466,12 @@ document.getElementById("btnSave").addEventListener("click", async () => {
     image: currentImageDataUrl,
     brand: document.getElementById("inBrand").value.trim(),
     category: document.getElementById("inCategory").value.trim(),
+    size: document.getElementById("inSize").value,
+    media: document.getElementById("inMedia").value.trim(),
     format: document.getElementById("inFormat").value,
     date: document.getElementById("inDate").value,
     targetAge,
     targetGender: document.getElementById("inGender").value,
-    region: document.getElementById("inRegion").value.trim(),
-    source: document.getElementById("inSource").value.trim(),
     copyText: document.getElementById("inCopy").value.trim(),
     memo: document.getElementById("inMemo").value.trim(),
     createdAt: editingId ? (allAds.find((a) => a.id === editingId)?.createdAt || Date.now()) : Date.now(),
@@ -445,12 +503,12 @@ function openDetail(id) {
   const meta = document.getElementById("detailMeta");
   const rows = [
     ["업종", ad.category],
+    ["소재 사이즈", ad.size],
+    ["매체", ad.media],
     ["소재 형식", ad.format],
     ["캡처 날짜", ad.date],
     ["타깃 연령", (ad.targetAge || []).join(", ")],
     ["타깃 성별", ad.targetGender],
-    ["지역", ad.region],
-    ["캡처 계정/기기", ad.source],
     ["카피 문구", ad.copyText],
     ["메모", ad.memo],
   ];
@@ -476,7 +534,7 @@ document.getElementById("btnDetailDelete").addEventListener("click", async () =>
 });
 
 // ---------- Filters ----------
-["fSearch", "fCategory", "fAge", "fGender", "fDateFrom", "fDateTo", "fSort"].forEach((id) => {
+["fSearch", "fCategory", "fMedia", "fSize", "fAge", "fGender", "fDateFrom", "fDateTo", "fSort"].forEach((id) => {
   document.getElementById(id).addEventListener("input", renderGallery);
   document.getElementById(id).addEventListener("change", renderGallery);
 });
@@ -484,6 +542,8 @@ document.getElementById("btnDetailDelete").addEventListener("click", async () =>
 document.getElementById("btnResetFilter").addEventListener("click", () => {
   document.getElementById("fSearch").value = "";
   document.getElementById("fCategory").value = "";
+  document.getElementById("fMedia").value = "";
+  document.getElementById("fSize").value = "";
   document.getElementById("fAge").value = "";
   document.getElementById("fGender").value = "";
   document.getElementById("fDateFrom").value = "";

@@ -26,6 +26,17 @@
         <option value="">업종 전체</option>
       </select>
 
+      <select id="fMedia">
+        <option value="">매체 전체</option>
+      </select>
+
+      <select id="fSize">
+        <option value="">사이즈 전체</option>
+        <option value="가로">가로형</option>
+        <option value="세로">세로형</option>
+        <option value="정방형">정방형</option>
+      </select>
+
       <select id="fAge">
         <option value="">타깃 연령 전체</option>
         <option value="10대">10대</option>
@@ -111,6 +122,25 @@
             </datalist>
           </label>
 
+          <label>소재 사이즈
+            <select id="inSize">
+              <option value="">선택 안 함</option>
+              <option value="가로">가로형</option>
+              <option value="세로">세로형</option>
+              <option value="정방형">정방형</option>
+            </select>
+          </label>
+
+          <label>매체
+            <input type="text" id="inMedia" list="mediaList" placeholder="예: Google, Meta, Kakao, CPA..." />
+            <datalist id="mediaList">
+              <option value="Google"></option>
+              <option value="Meta"></option>
+              <option value="Kakao"></option>
+              <option value="CPA"></option>
+            </datalist>
+          </label>
+
           <label>소재 형식
             <select id="inFormat">
               <option value="오브젝트형">오브젝트형</option>
@@ -141,14 +171,6 @@
               <option value="남성">남성</option>
               <option value="여성">여성</option>
             </select>
-          </label>
-
-          <label>지역 (선택)
-            <input type="text" id="inRegion" placeholder="예: 서울, 전국..." />
-          </label>
-
-          <label>캡처 계정/기기 메모 (선택)
-            <input type="text" id="inSource" placeholder="예: 30대 남성 테스트 계정" />
           </label>
 
           <label class="full-width">카피 문구
