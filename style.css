@@ -125,8 +125,6 @@ main { padding: 20px 24px 60px; max-width: 1200px; margin: 0 auto; }
 .tag.media { background: #eef2ff; color: #4338ca; }
 .tag.size { background: #f5f3ff; color: #6d28d9; }
 .tag.format { background: #fff7ed; color: #c2410c; }
-.tag.age { background: #ecfdf5; color: #047857; }
-.tag.gender { background: #fef3f2; color: #b42318; }
 
 .card-date { font-size: 11px; color: var(--text-muted); }
 
@@ -255,28 +253,6 @@ main { padding: 20px 24px 60px; max-width: 1200px; margin: 0 auto; }
 }
 
 .full-width { grid-column: 1 / -1; }
-
-.fieldset-inline {
-  grid-column: 1 / -1;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.fieldset-inline legend { font-size: 12px; color: var(--text-muted); font-weight: 600; padding: 0 4px; }
-
-.chk {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 4px;
-  font-weight: 400 !important;
-  font-size: 13px !important;
-  color: var(--text) !important;
-}
 
 .modal-footer {
   display: flex;

@@ -233,8 +233,6 @@ function getFilters() {
     search: document.getElementById("fSearch").value.trim().toLowerCase(),
     media: document.getElementById("fMedia").value,
     size: document.getElementById("fSize").value,
-    age: document.getElementById("fAge").value,
-    gender: document.getElementById("fGender").value,
     dateFrom: document.getElementById("fDateFrom").value,
     dateTo: document.getElementById("fDateTo").value,
     sort: document.getElementById("fSort").value,
@@ -249,8 +247,6 @@ function applyFilters(ads, f) {
     }
     if (f.media && a.media !== f.media) return false;
     if (f.size && a.size !== f.size) return false;
-    if (f.age && !(a.targetAge || []).includes(f.age)) return false;
-    if (f.gender && a.targetGender !== f.gender) return false;
     if (f.dateFrom && a.date && a.date < f.dateFrom) return false;
     if (f.dateTo && a.date && a.date > f.dateTo) return false;
     return true;
@@ -292,8 +288,6 @@ function renderGallery() {
           ${a.media ? `<span class="tag media">${escapeHtml(a.media)}</span>` : ""}
           ${a.size ? `<span class="tag size">${escapeHtml(a.size)}</span>` : ""}
           ${a.format ? `<span class="tag format">${escapeHtml(a.format)}</span>` : ""}
-          ${(a.targetAge || []).map((t) => `<span class="tag age">${escapeHtml(t)}</span>`).join("")}
-          ${a.targetGender ? `<span class="tag gender">${escapeHtml(a.targetGender)}</span>` : ""}
         </div>
         <p class="card-date">${a.date || ""}</p>
       </div>
@@ -327,10 +321,8 @@ function resetForm() {
   document.getElementById("inMedia").value = "";
   document.getElementById("inFormat").value = "";
   document.getElementById("inDate").value = new Date().toISOString().slice(0, 10);
-  document.getElementById("inGender").value = "전체/불명";
   document.getElementById("inCopy").value = "";
   document.getElementById("inMemo").value = "";
-  document.querySelectorAll('.fieldset-inline input[type="checkbox"]').forEach((c) => (c.checked = false));
   document.getElementById("btnDelete").hidden = true;
   document.getElementById("modalTitle").textContent = "광고 추가";
   const statusEl = document.getElementById("ocrStatus");
@@ -356,13 +348,8 @@ function openEditModal(ad) {
   document.getElementById("inMedia").value = ad.media || "";
   document.getElementById("inFormat").value = ad.format || "";
   document.getElementById("inDate").value = ad.date || "";
-  document.getElementById("inGender").value = ad.targetGender || "전체/불명";
   document.getElementById("inCopy").value = ad.copyText || "";
   document.getElementById("inMemo").value = ad.memo || "";
-  (ad.targetAge || []).forEach((val) => {
-    const el = document.querySelector(`.fieldset-inline input[value="${val}"]`);
-    if (el) el.checked = true;
-  });
   document.getElementById("btnDelete").hidden = false;
   document.getElementById("modalTitle").textContent = "광고 수정";
   modalBackdrop.hidden = false;
@@ -470,8 +457,6 @@ document.getElementById("btnSave").addEventListener("click", async () => {
     alert("이미지를 먼저 업로드해주세요.");
     return;
   }
-  const targetAge = Array.from(document.querySelectorAll('.fieldset-inline input[type="checkbox"]:checked')).map((c) => c.value);
-
   const record = {
     id: editingId || uid(),
     image: currentImageDataUrl,
@@ -480,8 +465,6 @@ document.getElementById("btnSave").addEventListener("click", async () => {
     media: document.getElementById("inMedia").value,
     format: document.getElementById("inFormat").value,
     date: document.getElementById("inDate").value,
-    targetAge,
-    targetGender: document.getElementById("inGender").value,
     copyText: document.getElementById("inCopy").value.trim(),
     memo: document.getElementById("inMemo").value.trim(),
     createdAt: editingId ? (allAds.find((a) => a.id === editingId)?.createdAt || Date.now()) : Date.now(),
@@ -516,8 +499,6 @@ function openDetail(id) {
     ["매체", ad.media],
     ["소재 형식", ad.format],
     ["캡처 날짜", ad.date],
-    ["타깃 연령", (ad.targetAge || []).join(", ")],
-    ["타깃 성별", ad.targetGender],
     ["카피 문구", ad.copyText],
     ["메모", ad.memo],
   ];
@@ -543,7 +524,7 @@ document.getElementById("btnDetailDelete").addEventListener("click", async () =>
 });
 
 // ---------- Filters ----------
-["fSearch", "fMedia", "fSize", "fAge", "fGender", "fDateFrom", "fDateTo", "fSort"].forEach((id) => {
+["fSearch", "fMedia", "fSize", "fDateFrom", "fDateTo", "fSort"].forEach((id) => {
   document.getElementById(id).addEventListener("input", renderGallery);
   document.getElementById(id).addEventListener("change", renderGallery);
 });
@@ -552,8 +533,6 @@ document.getElementById("btnResetFilter").addEventListener("click", () => {
   document.getElementById("fSearch").value = "";
   document.getElementById("fMedia").value = "";
   document.getElementById("fSize").value = "";
-  document.getElementById("fAge").value = "";
-  document.getElementById("fGender").value = "";
   document.getElementById("fDateFrom").value = "";
   document.getElementById("fDateTo").value = "";
   document.getElementById("fSort").value = "dateDesc";
