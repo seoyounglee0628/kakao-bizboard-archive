@@ -467,6 +467,11 @@ dropZone.addEventListener("drop", (e) => {
 
 document.addEventListener("paste", (e) => {
   if (modalBackdrop.hidden) return;
+  // 브랜드/카피 등 텍스트 필드를 고치는 중에 클립보드에 예전 이미지가 남아있으면
+  // 텍스트를 붙여넣으려 한 건데도 이미지 붙여넣기로 오인해 크롭 화면으로 튕기게 된다.
+  // 텍스트 입력창에 포커스가 있을 때는 이미지 자동 붙여넣기를 건너뛴다.
+  const active = document.activeElement;
+  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
   const items = e.clipboardData?.items || [];
   for (const item of items) {
     if (item.type.startsWith("image/")) {
@@ -617,7 +622,9 @@ document.getElementById("btnRefresh").addEventListener("click", refresh);
 
 // ---------- Keyboard ----------
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
+  // 한글 등 IME로 글자를 조합하는 중에 오타를 취소하려고 누른 Escape까지
+  // 여기서 잡아버리면 입력 중이던 팝업이 그대로 닫혀버린다. 조합 중인 Escape는 무시한다.
+  if (e.key === "Escape" && !e.isComposing) {
     if (!modalBackdrop.hidden) closeModal();
     if (!detailBackdrop.hidden) detailBackdrop.hidden = true;
   }
